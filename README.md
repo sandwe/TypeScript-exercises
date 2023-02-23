@@ -503,3 +503,215 @@ persons.filter(isUser).forEach(logPerson);
 - `parameterName is Type`을 작성해 함수에 전달된 매개변수의 명제를 만든다.
 - 리턴 시에 명제를 만족할 조건을 반환하며 타입 가드 함수를 정의할 수 있다.
 - 조건을 만족하면 true를 반환하고, 통과한 값은 명제를 만족하여 해당 타입을 갖는다.
+
+<br />
+
+## 5번
+
+> Utility Type을 사용해 타입 정의하는 문제
+
+### 문제
+
+```ts
+/*
+
+Intro:
+
+    Time to filter the data! In order to be flexible
+    we filter users using a number of criteria and
+    return only those matching all of the criteria.
+    We don't need Admins yet, we only filter Users.
+
+Exercise:
+
+    Without duplicating type structures, modify
+    filterUsers function definition so that we can
+    pass only those criteria which are needed,
+    and not the whole User information as it is
+    required now according to typing.
+
+Higher difficulty bonus exercise:
+
+    Exclude "type" from filter criterias.
+
+*/
+
+interface User {
+  type: "user";
+  name: string;
+  age: number;
+  occupation: string;
+}
+
+interface Admin {
+  type: "admin";
+  name: string;
+  age: number;
+  role: string;
+}
+
+export type Person = User | Admin;
+
+export const persons: Person[] = [
+  {type: "user", name: "Max Mustermann", age: 25, occupation: "Chimney sweep"},
+  {
+    type: "admin",
+    name: "Jane Doe",
+    age: 32,
+    role: "Administrator",
+  },
+  {
+    type: "user",
+    name: "Kate Müller",
+    age: 23,
+    occupation: "Astronaut",
+  },
+  {
+    type: "admin",
+    name: "Bruce Willis",
+    age: 64,
+    role: "World saver",
+  },
+  {
+    type: "user",
+    name: "Wilson",
+    age: 23,
+    occupation: "Ball",
+  },
+  {
+    type: "admin",
+    name: "Agent Smith",
+    age: 23,
+    role: "Administrator",
+  },
+];
+
+export const isAdmin = (person: Person): person is Admin => person.type === "admin";
+export const isUser = (person: Person): person is User => person.type === "user";
+
+export function logPerson(person: Person) {
+  let additionalInformation = "";
+  if (isAdmin(person)) {
+    additionalInformation = person.role;
+  }
+  if (isUser(person)) {
+    additionalInformation = person.occupation;
+  }
+  console.log(` - ${person.name}, ${person.age}, ${additionalInformation}`);
+}
+
+export function filterUsers(persons: Person[], criteria: User): User[] {
+  return persons.filter(isUser).filter((user) => {
+    const criteriaKeys = Object.keys(criteria) as (keyof User)[];
+    return criteriaKeys.every((fieldName) => {
+      return user[fieldName] === criteria[fieldName];
+    });
+  });
+}
+
+console.log("Users of age 23:");
+
+filterUsers(persons, {
+  age: 23,
+}).forEach(logPerson);
+
+// In case if you are stuck:
+// https://www.typescriptlang.org/docs/handbook/utility-types.html
+// https://www.typescriptlang.org/docs/handbook/release-notes/typescript-2-8.html#predefined-conditional-types
+```
+
+### 풀이
+
+```ts
+interface User {
+  type: "user";
+  name: string;
+  age: number;
+  occupation: string;
+}
+
+interface Admin {
+  type: "admin";
+  name: string;
+  age: number;
+  role: string;
+}
+
+export type Person = User | Admin;
+
+export const persons: Person[] = [
+  {type: "user", name: "Max Mustermann", age: 25, occupation: "Chimney sweep"},
+  {
+    type: "admin",
+    name: "Jane Doe",
+    age: 32,
+    role: "Administrator",
+  },
+  {
+    type: "user",
+    name: "Kate Müller",
+    age: 23,
+    occupation: "Astronaut",
+  },
+  {
+    type: "admin",
+    name: "Bruce Willis",
+    age: 64,
+    role: "World saver",
+  },
+  {
+    type: "user",
+    name: "Wilson",
+    age: 23,
+    occupation: "Ball",
+  },
+  {
+    type: "admin",
+    name: "Agent Smith",
+    age: 23,
+    role: "Administrator",
+  },
+];
+
+export const isAdmin = (person: Person): person is Admin => person.type === "admin";
+export const isUser = (person: Person): person is User => person.type === "user";
+
+export function logPerson(person: Person) {
+  let additionalInformation = "";
+  if (isAdmin(person)) {
+    additionalInformation = person.role;
+  }
+  if (isUser(person)) {
+    additionalInformation = person.occupation;
+  }
+  console.log(` - ${person.name}, ${person.age}, ${additionalInformation}`);
+}
+
+export function filterUsers(persons: Person[], criteria: Partial<Omit<User, "type">>): User[] {
+  return persons.filter(isUser).filter((user) => {
+    const criteriaKeys = Object.keys(criteria) as (keyof Partial<Omit<User, "type">>)[];
+    return criteriaKeys.every((fieldName) => {
+      return user[fieldName] === criteria[fieldName];
+    });
+  });
+}
+
+console.log("Users of age 23:");
+
+filterUsers(persons, {
+  age: 23,
+}).forEach(logPerson);
+
+// In case if you are stuck:
+// https://www.typescriptlang.org/docs/handbook/utility-types.html
+// https://www.typescriptlang.org/docs/handbook/release-notes/typescript-2-8.html#predefined-conditional-types
+```
+
+[TypeScript Playground에서 코드 보기](https://www.typescriptlang.org/play?#code/PQKgsAUJCSB2AuAnA9gLkpABNzAVAlgLYCmm8ymAZvgDbzGJkAWpAJgIbzsCEmcmyRKwZkKAI1KUaxAB74x0rDgDuk2vUYBXAM4NtmHflgBzTO0yxNhCY2SVMAY0T4N+c+1isl2RMXibEWAFYGgBPZmRdTEJOByYjU3YaGgF7eBZHZ1d2ADpvTAB1NmRYAHJ4C2JiVkwAQVZCI31QvwAaTFVgsKp1EQBVXURtPKgIAFEZBgd8XXRRnEKXJmRNCtZNAAcafAdOBLJQjdJtJE0Hf19tdsJkVnxKUPzqOgYBvSpNWHP8EsxhalgLh+QW0FHSnA6pF2sHyG3Y2n0JW66UiUKyDDcHXicTMvkq1WqrXyHhqsGQFXSpGUy2kmDejCMlEEMXgwLM+hcmBm+V8AEdNPhfKTkMozA4HII7iZRAcNgkRpAABL4YwsRh3SjUByaOjhMQlHSYWRTGbEOb5CYOGiaYSYABE8EOxDtVBQhB6L0YThcGPhCogIGAGAgRg0lHYDlI9MwAG98o6jqhMKUdAxSgBufKwdgkJMnZwmTMQBbsYxmixWGxFhbIcWbPYlPNIBJFgC+wdDDHDkbqDSMsfjTqTpXYfbK1Zw2dzmHzLeJZaTlmsDAnPmQ0ibBeMbeDsg2ggpTswAAU9L8ALx0waYAA+vcasCLkD3B8cJROmCOQ3fSdP39gADaAC6mCXgB+QxrK5YpoMpTtFO0EALLsDImCIToGgxLAZTtKW5YAEwAKztLW2pwqyjbJgAwvEhCwMQ4TaKoxAbKUmCtkSxY4HGXELNgCbQaOD5wfkCwIcOABSHikAAIsgxAibxfF4UmADM+GcXxOAoBuyb1A+MxIJwgilPkHEQaJOACcOqaIIpWnYOJyYANKcKQiEAD-JGmmkOSpmD4apvlaaR9YUbAw61PmJTsKsplKeZSk8Q5UHDkJRj2Q5TmlAAQogZykAUtDbNomVaf5ABsAAswV8Tp0EFIINA1No7AAG5pmZtXJQ51nJrZZV8dlRU0KCOGWdg-mBbVNZ1uRwLDjlSQ0PFCyJQsPVaX1I5joNYk5tBtRlggmAAMqNOke04FNQUTZg9WRWOhmIMZdlmZAQFPhAL6IBUEqwB+Mz6f2l4ABRfmNv5nrAACUSYQ78Mz3iDAB8n7QzkAmgeel47cJRY-X974VDM0ZgwjEUntDcPo-+XL6GTaMU5jR447jA1fYTHxfOFmA0Mgxh-mN4PQ1D-4wwOSnSBUo53OFSRwEyiAsmyuMZvk9yYKDQNjiL4sS5tymsHLwIK7ASsqxetNjTk9WruxGv2Nr2j0nrY0wwbd2y0CMU0IrzINkEl7M6F80lPb7ZKf9oLSDk-PGKDAAGmAALSYAAJDGzMIRxGdZxjeG55n3vy375sB+FraJzDO6jFzlCfN8vzPBo9LaG7P5U-+wHtN62S-uwv1uDQAA8ADyF0j-S7TlE6pQoyjNP0sBksLL4FxBBTwwtwwzv0jDOQ74goOg7ZEvnmjhsLNHf3os47DOQx+iXmPYgAFbEOcOQANZP6Dfe+glvCLWv9Qh2BPIPVkSRx6T2nsmAS89F7AXtmvPwAQggAPvo-UIwxiAdUQKEE+1BiDNQAHIHXPpfO6qCN4GEGABYhZCDogTZpkH098GH4BIawchJBPp3VbDXMyQiICR0gNHdcxA44C1BqUNuqQzBlgCqpVApQRGQCPm3UGsJoZXAskpEsC5lHvQgAfJWYwIxMFBvHIWJR1EQGAMAPgGD4SkE1mAzQuJjj+AcN-OYjjMBMHgPADY2hUCOOUJElmRxtDeg2PAGgHhjA5EEMYYArBazaGAEwEk+pkDf2AKsWgLhQgpwEsMIJhAaCQACUEkJYSIlRPKXEhJSSUmIDSRkhwWScmeDyQU3w0hXEpzJPQLJzTnDxJTvhFOAAOHIlSaAAGINhCmIACaoKd-om19mUp02hIBAA)
+
+- filterUsers 함수의 두번째 매개변수의 타입을 정의해야 한다.
+- `criteria`는 User의 `name`, `age`, `occupation` 속성들로 이루어진다.
+- 따라서, `Partial<Type>` Utility Type을 사용해 특정 타입의 부분 집합으로 이루어진 타입을 정의한다.
+- User의 `type` 속성은 `criteria`를 정의할 때 제외되어야 한다.
+- `type` 속성만 제거하기 위해서 `Omit` Utility Type을 사용한다.
+- `Omit<Type, Keys>`: 특정 객체 타입에서 Keys로 명시한 프로퍼티를 제거해 새로운 타입을 구성한다.
