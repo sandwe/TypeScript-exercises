@@ -715,3 +715,626 @@ filterUsers(persons, {
 - User의 `type` 속성은 `criteria`를 정의할 때 제외되어야 한다.
 - `type` 속성만 제거하기 위해서 `Omit` Utility Type을 사용한다.
 - `Omit<Type, Keys>`: 특정 객체 타입에서 Keys로 명시한 프로퍼티를 제거해 새로운 타입을 구성한다.
+
+<br/>
+
+## 6번
+
+> Function Overloads 사용하는 문제
+
+### 문제
+
+```ts
+/*
+
+Intro:
+
+    Filtering requirements have grown. We need to be
+    able to filter any kind of Persons.
+
+Exercise:
+
+    Fix typing for the filterPersons so that it can filter users
+    and return User[] when personType='user' and return Admin[]
+    when personType='admin'. Also filterPersons should accept
+    partial User/Admin type according to the personType.
+    `criteria` argument should behave according to the
+    `personType` argument value. `type` field is not allowed in
+    the `criteria` field.
+
+Higher difficulty bonus exercise:
+
+    Implement a function `getObjectKeys()` which returns more
+    convenient result for any argument given, so that you don't
+    need to cast it.
+
+    let criteriaKeys = Object.keys(criteria) as (keyof User)[];
+    -->
+    let criteriaKeys = getObjectKeys(criteria);
+
+*/
+
+interface User {
+  type: "user";
+  name: string;
+  age: number;
+  occupation: string;
+}
+
+interface Admin {
+  type: "admin";
+  name: string;
+  age: number;
+  role: string;
+}
+
+export type Person = User | Admin;
+
+export const persons: Person[] = [
+  {type: "user", name: "Max Mustermann", age: 25, occupation: "Chimney sweep"},
+  {type: "admin", name: "Jane Doe", age: 32, role: "Administrator"},
+  {type: "user", name: "Kate Müller", age: 23, occupation: "Astronaut"},
+  {type: "admin", name: "Bruce Willis", age: 64, role: "World saver"},
+  {type: "user", name: "Wilson", age: 23, occupation: "Ball"},
+  {type: "admin", name: "Agent Smith", age: 23, role: "Anti-virus engineer"},
+];
+
+export function logPerson(person: Person) {
+  console.log(` - ${person.name}, ${person.age}, ${person.type === "admin" ? person.role : person.occupation}`);
+}
+
+export function filterPersons(persons: Person[], personType: string, criteria: unknown): unknown[] {
+  return persons
+    .filter((person) => person.type === personType)
+    .filter((person) => {
+      let criteriaKeys = Object.keys(criteria) as (keyof Person)[];
+      return criteriaKeys.every((fieldName) => {
+        return person[fieldName] === criteria[fieldName];
+      });
+    });
+}
+
+export const usersOfAge23 = filterPersons(persons, "user", {age: 23});
+export const adminsOfAge23 = filterPersons(persons, "admin", {age: 23});
+
+console.log("Users of age 23:");
+usersOfAge23.forEach(logPerson);
+
+console.log();
+
+console.log("Admins of age 23:");
+adminsOfAge23.forEach(logPerson);
+
+// In case if you are stuck:
+// https://www.typescriptlang.org/docs/handbook/2/functions.html#function-overloads
+```
+
+### 풀이
+
+```ts
+/*
+
+Intro:
+
+    Filtering requirements have grown. We need to be
+    able to filter any kind of Persons.
+
+Exercise:
+
+    Fix typing for the filterPersons so that it can filter users
+    and return User[] when personType='user' and return Admin[]
+    when personType='admin'. Also filterPersons should accept
+    partial User/Admin type according to the personType.
+    `criteria` argument should behave according to the
+    `personType` argument value. `type` field is not allowed in
+    the `criteria` field.
+
+Higher difficulty bonus exercise:
+
+    Implement a function `getObjectKeys()` which returns more
+    convenient result for any argument given, so that you don't
+    need to cast it.
+
+    let criteriaKeys = Object.keys(criteria) as (keyof User)[];
+    -->
+    let criteriaKeys = getObjectKeys(criteria);
+
+*/
+
+interface User {
+  type: "user";
+  name: string;
+  age: number;
+  occupation: string;
+}
+
+interface Admin {
+  type: "admin";
+  name: string;
+  age: number;
+  role: string;
+}
+
+export type Person = User | Admin;
+
+export const persons: Person[] = [
+  {type: "user", name: "Max Mustermann", age: 25, occupation: "Chimney sweep"},
+  {type: "admin", name: "Jane Doe", age: 32, role: "Administrator"},
+  {type: "user", name: "Kate Müller", age: 23, occupation: "Astronaut"},
+  {type: "admin", name: "Bruce Willis", age: 64, role: "World saver"},
+  {type: "user", name: "Wilson", age: 23, occupation: "Ball"},
+  {type: "admin", name: "Agent Smith", age: 23, role: "Anti-virus engineer"},
+];
+
+export function logPerson(person: Person) {
+  console.log(` - ${person.name}, ${person.age}, ${person.type === "admin" ? person.role : person.occupation}`);
+}
+
+export const getObjectKeys = <T>(obj: T) => Object.keys(obj) as (keyof T)[];
+
+// overload signature (선언)
+export function filterPersons(persons: Person[], personType: "user", criteria: Partial<Omit<User, "type">>): User[];
+export function filterPersons(persons: Person[], personType: "admin", criteria: Partial<Omit<Admin, "type">>): Admin[];
+// implementation signature (구현)
+export function filterPersons(persons: Person[], personType: string, criteria: Partial<Person>): Person[] {
+  return persons
+    .filter((person) => person.type === personType)
+    .filter((person) => {
+      let criteriaKeys = getObjectKeys(criteria);
+      return criteriaKeys.every((fieldName) => {
+        return person[fieldName] === criteria[fieldName];
+      });
+    });
+}
+
+export const usersOfAge23 = filterPersons(persons, "user", {age: 23});
+export const adminsOfAge23 = filterPersons(persons, "admin", {age: 23});
+
+console.log("Users of age 23:");
+usersOfAge23.forEach(logPerson);
+
+console.log();
+
+console.log("Admins of age 23:");
+adminsOfAge23.forEach(logPerson);
+
+// In case if you are stuck:
+// https://www.typescriptlang.org/docs/handbook/2/functions.html#function-overloads
+```
+
+[TypeScript Playground에서 코드 보기](https://www.typescriptlang.org/play?#code/PQKgsAUJCSB2AuAnA9gLkpABNzAVAlgLYCmm8ymAZvgDbzGJkAWpAJgIbzsCEmcmyRKwZkKAI1KUaxAB74x0rDgDuk2vUYBXAM4NtmHflgBzTO0yxNhCY2SVMAY0T4N+c+1isl2RMXibEWAFYGgBPZmRdTEJOByYjU3YaGgF7eBZHZ1d2ADpvTAB1NmRYAHJ4C2JiVkwAQVZCI31QvwAaTFVgsKp1EQBVXURtPKgIAFEZBgd8XXRRnEKXJmRNCtZNAAcafAdOBLJQjdJtJE0Hf19tdsJkVnxKUPzqOgYBvSpNWHP8EsxhalgLh+QW0FHSnA6pF2sHyG3Y2n0JW66UiUKyDDcHXicTMvkq1WqrXyHhqsGQFXSpGUy2kmDejCMlEEMXgwLM+hcmBm+V8AEdNPhfKTkMozA4HII7iZRAcNgkRpAABL4YwsRh3SjUByaOjhMQlHSYWRTGbEOb5CYOGiaYSYABE8EOxDtVBQhB6L0YThcGPhCogIGAGAgRg0lHYDlI9MwAG98o6jqhMKUdAxSgBufKwdgkJMnZwmTMQBbsYxmixWGxFhbIcWbPYlPNIBJFgC+wdDDHDkbqDSMsfjTqTpXYfbK1Zw2dzmHzLeJZaTlmsDAnPmQ0ibBeMbeDsg2ggpTswAAU9L8ALx0waYAA+vcasCLkD3B8cJROmCOQ3fSdP39gADaAC6mCXgB+QxrK5YpoMpTtFO0EALLsDImCIToGgxLAZTtKW5YAEwAKztLW2pwqyjbJgAwvEhCwMQ4TaKoxAbKUmCtkSxY4HGXELNgCbQaOD5wfkCwIcOABSHikAAIsgxAibxfF4UmADM+GcXxOAoBuyb1A+MxIJwgilPkHEQaJOACcOqaIIpWnYOJyYANKcKQiEAD-JGmmkOSpmD4apvlaaR9YUbAw61PmJTsKsplKeZSk8Q5UHDkJRj2Q5TmlAAQogZykAUtDbNomVaf5ABsAAswV8Tp0EFIINA1No7AAG5pmZtXJQ51nJrZZV8dlRU0KCOGWdg-mBbVNZ1uRwLDjlSQ0PFCyJQsPVaX1I5joNYk5tBtRlggmAAMqNOke04FNQUTZg9WRWOhmIMZdlmZAQFPhAL6IBUEqwB+Mz6f2l4ABRfmNv5nrAACUSYQ78Mz3iDAB8n7QzkAmgeel47cJRY-X974VDM0ZgwjEUntDcPo-+XL6GTaMU5jR447jA1fYTHxfOFmA0Mgxh-mN4PQ1D-4wwOSnSBUo53OFSRwEyiAsmyuMZvk9yYKDQNjiL4sS5tymsHLwIK7ASsqxetNjTk9WruxGv2Nr2j0nrY0wwbd2y0CMU0IrzINkEl7M6F80lPb7ZKf9oLSDk-PGKDAAGmAALSYAAJDGzMIRxGdZxjeG55n3vy375sB+FraJzDO6jFzlCfN8vzPBo9LaG7P5U-+wHtN62S-uwv1uDQAA8ADyF0j-S7TlE6pQoyjNP0sBksLL4FxBBTwwtwwzv0jDOQ74goOg7ZEvnmjhsLNHf3os47DOQx+iXmPYgAFbEOcOQANZP6Dfe+glvCLWv9Qh2BPIPVkSRx6T2nsmAS89F7AXtmvPwAQggAPvo-UIwxiAdUQKEE+1BiDNQAHIHXPpfO6qCN4GEGABYhZCDogTZpkH098GH4BIawchJBPp3VbDXMyQiICR0gNHdcxA44C1BqUNuqQzBlgCqpVApQRGQCPm3UGsJoZXAskpEsC5lHvQgAfJWYwIxMFBvHIWJR1EQGAMAPgGD4SkE1mAzQuJjj+AcN-OYjjMBMHgPADY2hUCOOUJElmRxtDeg2PAGgHhjA5EEMYYArBazaGAEwEk+pkDf2AKsWgLhQgpwEsMIJhAaCQACUEkJYSIlRPKXEhJSSUmIDSRkhwWScmeDyQU3w0hXEpzJPQLJzTnDxJTvhFOAAOHIlSaAAGINhCmIACaoKd-om19mUp02hIBAA)
+
+- function overloading(함수 오버로딩): 같은 이름을 갖는 함수지만 매개변수 갯수나 타입을 다르게 정의할 수 있다.
+- 함수의 로직은 같지만 `personType`에 따라 User 또는 Admin을 필터링할 수 있도록 해야 하기 때문에 함수 오버로딩을 사용할 수 있다.
+
+<br />
+
+## 7번
+
+> Generic 사용하는 문제
+
+### 문제
+
+```ts
+/*
+
+Intro:
+
+    Filtering was completely removed from the project.
+    It turned out that this feature was just not needed
+    for the end-user and we spent a lot of time just because
+    our office manager told us to do so. Next time we should
+    instead listen to the product management.
+
+    Anyway we have a new plan. CEO's friend Nick told us
+    that if we randomly swap user names from time to time
+    in the community, it would be very funny and the project
+    would definitely succeed!
+
+Exercise:
+
+    Implement swap which receives 2 persons and returns them in
+    the reverse order. The function itself is already
+    there, actually. We just need to provide it with proper types.
+    Also this function shouldn't necessarily be limited to just
+    Person types, lets type it so that it works with any two types
+    specified.
+
+*/
+
+interface User {
+  type: "user";
+  name: string;
+  age: number;
+  occupation: string;
+}
+
+interface Admin {
+  type: "admin";
+  name: string;
+  age: number;
+  role: string;
+}
+
+function logUser(user: User) {
+  const pos = users.indexOf(user) + 1;
+  console.log(` - #${pos} User: ${user.name}, ${user.age}, ${user.occupation}`);
+}
+
+function logAdmin(admin: Admin) {
+  const pos = admins.indexOf(admin) + 1;
+  console.log(` - #${pos} Admin: ${admin.name}, ${admin.age}, ${admin.role}`);
+}
+
+const admins: Admin[] = [
+  {
+    type: "admin",
+    name: "Will Bruces",
+    age: 30,
+    role: "Overseer",
+  },
+  {
+    type: "admin",
+    name: "Steve",
+    age: 40,
+    role: "Steve",
+  },
+];
+
+const users: User[] = [
+  {
+    type: "user",
+    name: "Moses",
+    age: 70,
+    occupation: "Desert guide",
+  },
+  {
+    type: "user",
+    name: "Superman",
+    age: 28,
+    occupation: "Ordinary person",
+  },
+];
+
+export function swap(v1, v2) {
+  return [v2, v1];
+}
+
+function test1() {
+  console.log("test1:");
+  const [secondUser, firstAdmin] = swap(admins[0], users[1]);
+  logUser(secondUser);
+  logAdmin(firstAdmin);
+}
+
+function test2() {
+  console.log("test2:");
+  const [secondAdmin, firstUser] = swap(users[0], admins[1]);
+  logAdmin(secondAdmin);
+  logUser(firstUser);
+}
+
+function test3() {
+  console.log("test3:");
+  const [secondUser, firstUser] = swap(users[0], users[1]);
+  logUser(secondUser);
+  logUser(firstUser);
+}
+
+function test4() {
+  console.log("test4:");
+  const [firstAdmin, secondAdmin] = swap(admins[1], admins[0]);
+  logAdmin(firstAdmin);
+  logAdmin(secondAdmin);
+}
+
+function test5() {
+  console.log("test5:");
+  const [stringValue, numericValue] = swap(123, "Hello World");
+  console.log(` - String: ${stringValue}`);
+  console.log(` - Numeric: ${numericValue}`);
+}
+
+[test1, test2, test3, test4, test5].forEach((test) => test());
+
+// In case if you are stuck:
+// https://www.typescriptlang.org/docs/handbook/2/everyday-types.html
+// https://www.typescriptlang.org/docs/handbook/2/generics.html
+```
+
+### 풀이
+
+```ts
+interface User {
+  type: "user";
+  name: string;
+  age: number;
+  occupation: string;
+}
+
+interface Admin {
+  type: "admin";
+  name: string;
+  age: number;
+  role: string;
+}
+
+function logUser(user: User) {
+  const pos = users.indexOf(user) + 1;
+  console.log(` - #${pos} User: ${user.name}, ${user.age}, ${user.occupation}`);
+}
+
+function logAdmin(admin: Admin) {
+  const pos = admins.indexOf(admin) + 1;
+  console.log(` - #${pos} Admin: ${admin.name}, ${admin.age}, ${admin.role}`);
+}
+
+const admins: Admin[] = [
+  {
+    type: "admin",
+    name: "Will Bruces",
+    age: 30,
+    role: "Overseer",
+  },
+  {
+    type: "admin",
+    name: "Steve",
+    age: 40,
+    role: "Steve",
+  },
+];
+
+const users: User[] = [
+  {
+    type: "user",
+    name: "Moses",
+    age: 70,
+    occupation: "Desert guide",
+  },
+  {
+    type: "user",
+    name: "Superman",
+    age: 28,
+    occupation: "Ordinary person",
+  },
+];
+
+// Generic 함수
+export function swap<T, U>(v1: T, v2: U): [U, T] {
+  return [v2, v1];
+}
+
+function test1() {
+  console.log("test1:");
+  const [secondUser, firstAdmin] = swap(admins[0], users[1]);
+  logUser(secondUser);
+  logAdmin(firstAdmin);
+}
+
+function test2() {
+  console.log("test2:");
+  const [secondAdmin, firstUser] = swap(users[0], admins[1]);
+  logAdmin(secondAdmin);
+  logUser(firstUser);
+}
+
+function test3() {
+  console.log("test3:");
+  const [secondUser, firstUser] = swap(users[0], users[1]);
+  logUser(secondUser);
+  logUser(firstUser);
+}
+
+function test4() {
+  console.log("test4:");
+  const [firstAdmin, secondAdmin] = swap(admins[1], admins[0]);
+  logAdmin(firstAdmin);
+  logAdmin(secondAdmin);
+}
+
+function test5() {
+  console.log("test5:");
+  const [stringValue, numericValue] = swap(123, "Hello World");
+  console.log(` - String: ${stringValue}`);
+  console.log(` - Numeric: ${numericValue}`);
+}
+
+[test1, test2, test3, test4, test5].forEach((test) => test());
+
+// In case if you are stuck:
+// https://www.typescriptlang.org/docs/handbook/2/everyday-types.html
+// https://www.typescriptlang.org/docs/handbook/2/generics.html
+```
+
+[TypeScript Playground에서 코드 보기](https://www.typescriptlang.org/play?#code/PQKgsAUJCSB2AuAnA9gLkpABNzAxAlgDbwCmi+sA5pgO4CGAzpgMbIC2ADoSaYQJ6ZEJNsgBuJACaYAZijaZ4ACxKYOKAFYlm8AHRYc0eAoCuiWJMzJjRpXRuL8TaSTumV9JuuMMjsZL5JJSX1saWREBWVMElgJAFpvMkw6WNoVBg4YozpMQn9LaQV8NhUvH0wAIy06RJDLUwLpfGYVNhS6SiT4ZEIpbwVkTAlBhmQdTAA5EgAPG2L3dMUrXrqKHxcpQkdSWAHIlTVkCWNtTDbYDuEsvSgIHEwAQVg+egEaFUU6cWTMcxpVQgpcYAYQAogB5ADkTnIMSkE2aAGsBr1MN46rYjPhCu9BClhmx+JgGPQOGiGEkLiUYewiiU9vB5qtdkoVKw2GxjLB8PA+AAaTA82jLKRVTDiRACaRc57JVKs1QaLTwOo0EVDEhNbm8AQME4tSQAQgwEFB0zIzEcJHQt3u0E43BKCGJpNoDmYikEWhI+HETAATKoyKNYEx8V74KZQ-t5BQMVEhBKKZZEBIyOMACpRaWwbT4ZC7HkUwiFRzJQhCOgSPjxsgkAV0bTGOiEfjjADqpW8AQs3UVYnwacFRhoPM9h0yEV5mQYN3uD0Io0iZZzeYLxKWxl6sEhARaDAYdHIRLFWzYPN7gzKKruOAACsH19OSAwBdx4Exn8PiYNMd+1YgiJMKOShygI8BqgofAznUGRaNi+CSDckAgMAJoUKQiDSI2KgAKoUhEADeGLQdamCQokiCQgA3HUVJkT45BULRt7YJcqC-MYbBVIgLH3MgzDMMYHB2PmsAcYxFCUCxAC+6EIGQ2EtI8EjnrsxGsVBmQcZCVZqTRdF0CUElIFJfE4OxnHcWQ5nYCg3AmUx0mQHJtyroy655JQ+FkAAFJRHE+YgACUmAafcrChkYHDIEwAC85LBjoFBptM4LSP5BGhQA1JgACMtksAWozcDoXm+QABpgcSYAAxAAJIRMUMDJmBBRxjWUTo9EyQKnUEToly9Zg-XpgJQkiR5sAyRVwWySa7libkyCUA8qkUL5ekUBxa1qaF4U4JF5TNZgCVbaGyWxDM6WbetsA5flhVHT0JBlStlXVXVjXNa1u3bSNhHnd1RkkMNjVA0NfWA3dOj2aDs3zbcR3ZHdDA7XdADaAC6p2YBjdQHfc2DPjp52QnydT3PROntkQhCYAAQogJwvuTlMWZ0HEAMwAAwU5p9xwzp4JJoEVF1L1BPs8TpGk3dbMCzg1PkQAyqQ4gK0THNkQALHz0uCC9OlqyQGsS5AWMsZAyOJYgaNtQR2O4-jmmE0TJPkZRmta78IM6QAsrFrP8z7ySc5gADs+uK9g43CaJBY6QAIi+ZBGJQxiDiQkISyHOBu-cHsUQR3ta8rkIq8JZDnKXROWf6AAceda3Hk1icLqYUEeAiTiGOeaa5lsmjMMWIEYi3riSdAcAAPBmAq4QAfL5oh5Rx8-iv6gXBRxGO4QKGY427QiRmYeOiP6Aqr0PECuZAE8si+8B5b5+11M9pXlbuT9r5Cc3v8VIwGMKSRQkEFAUTQ7bwD+rAHGCUp4cFumpBgGMeZYwFJRFBeUsb-00l5IKvkQEFjAVlQqXkYG+UgT4GBuC74QAfgoJ+-pX5hQAaGF6b1KC+W-j4Lef8nqALxkQ2IMCIH4CgUFOBLpp6ZWDKg9ByRUYY2wbg+45C7qEK0MQmhZCVoEKofAIKtCFpcjXI-HwXMWFuw-q9L+pALGoH4Ww8owCtGxHATIcRPhJG4wQbIu28iMEESwTg3R3kCKaNAUYsJ+ivGGNIS5ExuYpqMJ8DrKxziOF2KfjrRxqjDqCIxgY0RxI3ESBgVIvx50QkNiUWg-J2B1FqUoXEnRdQmkbWEeUu6xi3KmJSfY+AABWDJmkbGcO4YMoZeSBFRSEaZKgAA1Fsxh6xWTIM0ZZhBVmVNJL5PK-ouYCkhAACRIK2QY7Zwi9CcWM4qWT3pVRqmrJyHVCKSSWSs+GDSirsM-o8z6EwuIbOYG82AwLyDMC2asmavTIAY0GXlAUgzL6pPgEctFOtkVPyGVjHQYRECgkbIoXyvlBmhTiovNFr9cGQGAMATAcAWCMBUNiTAfArDJCEMSSMzBEQ2npZgRQ8B4AcDRvSmgkqdDPgYMwcgHB4CAioDocIlBgDDGYAwYAnxYgVGQMgREwB-TAFNmQPgEg6B8DiDKnQwrCR0oZcK0V4rgCSpoNK0isr5WKpSJQFViA1Uaq1TqiQeqDVGuAJ0cwkLZx2sIJAIAA)
+
+- 문제에 `swap`함수의 매개변수는 Person 타입에 존재하는 값만으로 제한하지 않는다고 명시되어 있다.
+- 따라서, 어떤 타입이든 매개변수로 전달될 수 있어야 한다.
+- Generic을 사용하면 매개변수로 타입을 넘겨주는 것처럼 동작한다.
+
+<br />
+
+## 8번
+
+> Intersection type 사용하는 문제
+
+### 문제
+
+```ts
+/*
+
+Intro:
+
+    Project grew and we ended up in a situation with
+    some users starting to have more influence.
+    Therefore, we decided to create a new person type
+    called PowerUser which is supposed to combine
+    everything User and Admin have.
+
+Exercise:
+
+    Define type PowerUser which should have all fields
+    from both User and Admin (except for type),
+    and also have type 'powerUser' without duplicating
+    all the fields in the code.
+
+*/
+
+interface User {
+  type: "user";
+  name: string;
+  age: number;
+  occupation: string;
+}
+
+interface Admin {
+  type: "admin";
+  name: string;
+  age: number;
+  role: string;
+}
+
+type PowerUser = unknown;
+
+export type Person = User | Admin | PowerUser;
+
+export const persons: Person[] = [
+  {type: "user", name: "Max Mustermann", age: 25, occupation: "Chimney sweep"},
+  {type: "admin", name: "Jane Doe", age: 32, role: "Administrator"},
+  {type: "user", name: "Kate Müller", age: 23, occupation: "Astronaut"},
+  {type: "admin", name: "Bruce Willis", age: 64, role: "World saver"},
+  {
+    type: "powerUser",
+    name: "Nikki Stone",
+    age: 45,
+    role: "Moderator",
+    occupation: "Cat groomer",
+  },
+];
+
+function isAdmin(person: Person): person is Admin {
+  return person.type === "admin";
+}
+
+function isUser(person: Person): person is User {
+  return person.type === "user";
+}
+
+function isPowerUser(person: Person): person is PowerUser {
+  return person.type === "powerUser";
+}
+
+export function logPerson(person: Person) {
+  let additionalInformation: string = "";
+  if (isAdmin(person)) {
+    additionalInformation = person.role;
+  }
+  if (isUser(person)) {
+    additionalInformation = person.occupation;
+  }
+  if (isPowerUser(person)) {
+    additionalInformation = `${person.role}, ${person.occupation}`;
+  }
+  console.log(`${person.name}, ${person.age}, ${additionalInformation}`);
+}
+
+console.log("Admins:");
+persons.filter(isAdmin).forEach(logPerson);
+
+console.log();
+
+console.log("Users:");
+persons.filter(isUser).forEach(logPerson);
+
+console.log();
+
+console.log("Power users:");
+persons.filter(isPowerUser).forEach(logPerson);
+
+// In case if you are stuck:
+// https://www.typescriptlang.org/docs/handbook/utility-types.html
+```
+
+### 풀이
+
+```ts
+interface User {
+  type: "user";
+  name: string;
+  age: number;
+  occupation: string;
+}
+
+interface Admin {
+  type: "admin";
+  name: string;
+  age: number;
+  role: string;
+}
+
+type PowerUser = Omit<User, "type"> & Omit<Admin, "type"> & {type: "powerUser"};
+
+export type Person = User | Admin | PowerUser;
+
+export const persons: Person[] = [
+  {type: "user", name: "Max Mustermann", age: 25, occupation: "Chimney sweep"},
+  {type: "admin", name: "Jane Doe", age: 32, role: "Administrator"},
+  {type: "user", name: "Kate Müller", age: 23, occupation: "Astronaut"},
+  {type: "admin", name: "Bruce Willis", age: 64, role: "World saver"},
+  {
+    type: "powerUser",
+    name: "Nikki Stone",
+    age: 45,
+    role: "Moderator",
+    occupation: "Cat groomer",
+  },
+];
+
+function isAdmin(person: Person): person is Admin {
+  return person.type === "admin";
+}
+
+function isUser(person: Person): person is User {
+  return person.type === "user";
+}
+
+function isPowerUser(person: Person): person is PowerUser {
+  return person.type === "powerUser";
+}
+
+export function logPerson(person: Person) {
+  let additionalInformation: string = "";
+  if (isAdmin(person)) {
+    additionalInformation = person.role;
+  }
+  if (isUser(person)) {
+    additionalInformation = person.occupation;
+  }
+  if (isPowerUser(person)) {
+    additionalInformation = `${person.role}, ${person.occupation}`;
+  }
+  console.log(`${person.name}, ${person.age}, ${additionalInformation}`);
+}
+
+console.log("Admins:");
+persons.filter(isAdmin).forEach(logPerson);
+
+console.log();
+
+console.log("Users:");
+persons.filter(isUser).forEach(logPerson);
+
+console.log();
+
+console.log("Power users:");
+persons.filter(isPowerUser).forEach(logPerson);
+
+// In case if you are stuck:
+// https://www.typescriptlang.org/docs/handbook/utility-types.html
+```
+
+[TypeScript Playground에서 코드 보기](https://www.typescriptlang.org/play?#code/PQKgsAUJCSB2AuAnA9gLkpABNzAFFAVgKYDG8mA5okQO6YCGsAJpjUZkc0SwK4AOmAJawGmAM6D4PevEHIRNSQAssOMcgC27HmKKIx4+PUSzYFTPGSYl9AG7sNyakNgAzADY9OJIgDpV2AAqSnpErk5EADSs7EykgnEslpgk1DLs9JiwtJh8euoi8ACeeQEp9O7u3HjIbIgAqrqIrEqCJEpCBmL8fMi6SVYkmgBGwkRlRPaIRfCtZpiNegzMmACCTBrC1nZ+GBAAogAeeiSCuuhQEDiYACJhYxYl7Li1eovNNK3t4krIPO4sGz2BiVTCuQREAFiMquFAaTDDZCzBZNZYsdabEQACiIhx8fHI4WaxTyAEpImVGCwKuptsCSewAOS9OrvRmsZR-chMfjuNoyYQUSmg2bscGQpgGLailLIOL+S4gYB7YTwPSueg+FFLADeZQZqEwjJ0ekZAG4yrB6FpDWIkIKLVccPQKERDbAeBphnpHddkCQSPwBfJbfazI6AL4qhDqzXsDFbPVO7AGo30DbCc2W61uwyIB2U13uz3exC+nAoKqh-PhyBRy4Mmqs1EAXkwAHlNvAADzvaIAIgZ-YAfJgAGQdrvdhOwAdD0cTnWp-sst5NfsRx2QXG9EyPPJ4fLyTBt96YAA+awzIkvL2bPr2O6c5CGsDtuSPb8NuE-AG0ALonpgv5lDq+65saTSMtEVo2kaACy9CHJg8E6GqiAaIwsDQQwRaYAATAArNE-qBnwwawIajIAMKtBo2RFOIbBEHw7IRhSyaYGBqaMummI4bBEEAFKMOwNzIEQOEurmADM+HRJWEEzmcSAyE4bEcdc3FPFRJqIAJOZUQA0ukKEAD+VKa0TSYa+EySRAZBrIIZGqsdooFaPDwBpoHgVRfGZjBhlGgAQogPBagA6oIlRnFJeEAGwACwKcgVZGpFTgAuIOz6Zg7GgWU1w8auDRQZp1w4IJVEAHKCAA1vVgiYAAypY2TQUVzp4UlxFddgilUfBcp6Gp+kVZVmCkU5ciUUa1EyJQKCaKaZT1v+W4QK4PCwGQs2dDOWJ5PoLk-idsCkoax0FJ0V6YlxZTUFIiAiNd8i+I2LZfWm15ZhA9aQNtu3OSIZzvEdn7fp+l0fudt1nkm1xPTwL2wwUH1PCe32QaakZ7EDe3Hmcd5rnoEPnVD50w29oMGCTZW6o9RDPa9n4YweX1tsyrwM-peOXE+e4EyDmDuMgFBnQU5MFJTBSkg9nFVOQ6ZMJIs0VHARKYSD1aCkBjJ-dcgiuJgWJnIdNOkvLiOTQwTCqyDGtuE42v7W2NO+Ip5bYPWRsm2bYjg5b1v9XbDvq+4msuxRQEe9N5Eg97+VlMbpvEzzQfQyHnHXCravyE7Wsx22AAGAAkOoe4p7GYBXceOQns0RiXSe+zgr7qFUvhixQWLl5XbOCTXdds9Jw86nnjuR87GEUc3pL85AHdpX4PdYoyM5iKgjIL5ANNiL44LuOhAczqSh9OPsmpKFiPeS-Iu+XMvXdr4-S-yJ3q-i+v7xbzvjr70PjFE+YMmjnyJFfdot9xb3wuptZ+X9e5vwgAg7u39GT00wHpP+j9AFHxAWIem7xwGX2vtAiW0NNrAGAJgOA5RdBCBNkUP4DBnB2givVC41DrDwHgHwLe1CaBCPZkQMQqRBAEncIwCgvgnAUGAEwf0YhgA2GYIiZA9VgBeRipIIoABaBkB8lDwA0O4SAQA)
+
+- User와 Admin 타입 속성을 모두 갖고, type은 `powerUser`로 새로 정의되어야 한다.
+- type은 새로 정의해줘야 하므로 User와 Admin의 `type` 속성을 제거한 새로운 타입을 intersection한다.
+- 그리고 `{ type: 'powerUser' }`를 intersection한다.
